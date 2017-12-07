@@ -1,5 +1,6 @@
 package pl.homik.flexiblelambda.service.impl;
 
+import java.util.Collections;
 import java.util.Map;
 
 import de.hybris.bootstrap.annotations.UnitTest;
@@ -9,7 +10,6 @@ import de.hybris.platform.servicelayer.model.ModelService;
 import de.hybris.platform.servicelayer.search.FlexibleSearchQuery;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.fest.assertions.Assertions;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,9 +76,11 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 
 	@Test
 	public void shouldLoadWithExpressionParam() {
-		final Map.Entry entry = Pair.of("abc", "abc");
-		final SerializablePredicate<TestItemModel> lambda = e -> e.getString().equals(entry.getKey());
-		checkWhere(lambda, "{this.string} = ?a", entry.getKey());
+		final Map<String, String> map2 = Collections.singletonMap("key2", "value");
+		final Map<String, String> map1 = Collections.singletonMap("key", "key2");
+
+		final SerializablePredicate<TestItemModel> lambda = e -> e.getString().equals(map2.get(map1.get("key")));
+		checkWhere(lambda, "{this.string} = ?a", "value");
 	}
 
 	@Test
@@ -118,7 +120,8 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 		final FlexibleSearchQuery flex = translationService.translate(query);
 
 		//then
-		final String expectedQuery = "SELECT {this.PK} from {Order AS this LEFT JOIN User as thisuser on {this.user}={thisuser.PK}} WHERE ({thisuser.name} = ?a)";
+		final String expectedQuery = "SELECT {this.PK} from {Order AS this"
+						+ " LEFT JOIN User as thisuser on {this.user}={thisuser.PK}}" + " WHERE ({thisuser.name} = ?a)";
 		Assertions.assertThat(flex.getQuery()).isEqualToIgnoringCase(expectedQuery);
 		Assertions.assertThat(flex.getQueryParameters().values()).containsOnly("Darek");
 
@@ -146,12 +149,18 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 		final FlexibleSearchQuery flex2 = translationService.translate(query2);
 
 		//then
-		final String expectedQuery = "SELECT {this.PK} from {Order AS this LEFT JOIN Address as thisdeliveryAddress on {this.deliveryAddress}={thisdeliveryAddress.PK} LEFT JOIN Country as thisdeliveryAddresscountry on {thisdeliveryAddress.country}={thisdeliveryAddresscountry.PK}} WHERE ({thisdeliveryAddresscountry.isocode} = ?a)";
+		final String expectedQuery = "SELECT {this.PK} from {Order AS this"
+						+ " LEFT JOIN Address as thisdeliveryAddress on {this.deliveryAddress}={thisdeliveryAddress.PK}"
+						+ " LEFT JOIN Country as thisdeliveryAddresscountry on {thisdeliveryAddress.country}={thisdeliveryAddresscountry.PK}}"
+						+ " WHERE ({thisdeliveryAddresscountry.isocode} = ?a)";
 		Assertions.assertThat(flex.getQuery()).isEqualToIgnoringCase(expectedQuery);
 
 		Assertions.assertThat(flex.getQueryParameters().values()).containsOnly(poland);
 
-		final String expectedQuery2 = "SELECT {this.PK} from {Order AS this LEFT JOIN Address as thisdeliveryAddress on {this.deliveryAddress}={thisdeliveryAddress.PK} LEFT JOIN Country as thisdeliveryAddresscountry on {thisdeliveryAddress.country}={thisdeliveryAddresscountry.PK}} WHERE ({thisdeliveryAddresscountry.isocode} = ?a AND {thisdeliveryAddress.company} = ?b)";
+		final String expectedQuery2 = "SELECT {this.PK} from {Order AS this"
+						+ " LEFT JOIN Address as thisdeliveryAddress on {this.deliveryAddress}={thisdeliveryAddress.PK}"
+						+ " LEFT JOIN Country as thisdeliveryAddresscountry on {thisdeliveryAddress.country}={thisdeliveryAddresscountry.PK}}"
+						+ " WHERE ({thisdeliveryAddresscountry.isocode} = ?a AND {thisdeliveryAddress.company} = ?b)";
 		Assertions.assertThat(flex2.getQuery()).isEqualToIgnoringCase(expectedQuery2);
 
 		Assertions.assertThat(flex2.getQueryParameters().values()).containsOnly(poland, "SAP");
