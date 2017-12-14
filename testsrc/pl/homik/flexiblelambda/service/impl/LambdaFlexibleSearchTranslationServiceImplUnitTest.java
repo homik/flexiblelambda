@@ -84,6 +84,16 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 	}
 
 	@Test
+	public void shouldWorkWithOtherObject() {
+
+		final StringBuilder builder = new StringBuilder();
+		builder.append("test");
+
+		final SerializablePredicate<TestItemModel> lambda = e -> e.getString().equals(builder.toString());
+		checkWhere(lambda, "{this.string} = ?a", "test");
+	}
+
+	@Test
 	public void shouldWorkWithNullComparison() {
 
 		checkWhere(e -> e.getString() == null, "{this.string} is null");

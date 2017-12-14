@@ -11,7 +11,11 @@ import static com.trigersoft.jaque.expression.ExpressionType.LogicalOr;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Stack;
 import java.util.function.UnaryOperator;
 
@@ -41,7 +45,9 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 	private final ParametersNameGenerator paramGenerator;
 	private final ModelService modelService;
 	private final Stack<UnaryOperator<Object>> parameterModifiers = new Stack<>();
+	private final Set<Expression> alreadyEvaluated = Collections.newSetFromMap(new IdentityHashMap<>());
 	private boolean columnBlock = false;
+	private List<Expression> parameters = Collections.emptyList();
 
 	public ToFlexibleSearchVisitor(final ParametersNameGenerator paramGenerator, final ModelService modelService) {
 		this.paramGenerator = paramGenerator;
@@ -110,7 +116,7 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 		final String paramName = paramGenerator.next();
 		sb.getWhere().append('?').append(paramName);
 
-		if(!parameterModifiers.isEmpty()){
+		if (!parameterModifiers.isEmpty()) {
 			final UnaryOperator<Object> modifier = parameterModifiers.pop();
 			value = modifier.apply(value);
 		}
@@ -119,13 +125,19 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 
 	@Override
 	public PredicateTranslationResult visit(final InvocationExpression e) {
-		//TODO: do some magic here to support expression parameters
-
+		final List<Expression> oldParameters = parameters;
+		parameters = e.getArguments();
 		e.getTarget().accept(this);
-		// sometime we have lambda in lambda when Object is used inside lambda and we have the value in args
+		// we have to also evaluate arguments
 		for (final Expression arg : e.getArguments()) {
-			arg.accept(this);
+			if (!(arg instanceof ParameterExpression) && !alreadyEvaluated.contains(arg)) {
+				final ToConstantExpressionVisitor visitor = new ToConstantExpressionVisitor(oldParameters);
+				final ConstantExpression constantExpression = arg.accept(visitor);
+				alreadyEvaluated.addAll(visitor.getEvaluatedParams());
+				constantExpression.accept(this);
+			}
 		}
+		parameters = oldParameters;
 
 		return sb;
 	}
@@ -239,9 +251,6 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 
 		}
 		return false;
-	}
-
-	private void handleStringStartsWith() {
 	}
 
 	private boolean isFromRelation(final MemberExpression e) {
