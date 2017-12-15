@@ -5,7 +5,10 @@ import com.trigersoft.jaque.expression.Expression;
 import com.trigersoft.jaque.expression.ParameterExpression;
 import com.trigersoft.jaque.expression.SimpleExpressionVisitor;
 
-public class ConstantExpressionsCountVisitor extends SimpleExpressionVisitor {
+/**
+ * Visitor which counts occurrences of given Expression types
+ */
+public class CountingVisitor extends SimpleExpressionVisitor {
 
 	private int constantExpressionsCount = 0;
 	private int parameterExpressionCount = 0;

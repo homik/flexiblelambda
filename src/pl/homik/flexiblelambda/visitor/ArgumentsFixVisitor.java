@@ -8,6 +8,12 @@ import com.trigersoft.jaque.expression.InvocationExpression;
 import com.trigersoft.jaque.expression.ParameterExpression;
 import com.trigersoft.jaque.expression.SimpleExpressionVisitor;
 
+/**
+ * Visitor which is designed to change InvocableExpression so they replace known Parameters with constant expressions.
+ *
+ * For example if you have "str".equals("test") normally you would get expression 'P0.equals(test)' buf ater
+ * {@link #fixArguments(InvocableExpression, List)} the expression will be 'str.equals(test)'
+ */
 public class ArgumentsFixVisitor extends SimpleExpressionVisitor {
 
 	private final List<Expression> args;
@@ -16,7 +22,7 @@ public class ArgumentsFixVisitor extends SimpleExpressionVisitor {
 		this.args = args;
 	}
 
-	public static InvocableExpression normalize(final InvocableExpression e, final List<Expression> args) {
+	public static InvocableExpression fixArguments(final InvocableExpression e, final List<Expression> args) {
 
 		final ArgumentsFixVisitor parameterNormalizer = new ArgumentsFixVisitor(args);
 		return (InvocableExpression) e.accept(parameterNormalizer);

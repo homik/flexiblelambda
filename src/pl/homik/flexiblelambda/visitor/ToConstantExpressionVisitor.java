@@ -17,7 +17,7 @@ import com.trigersoft.jaque.expression.ParameterExpression;
 import com.trigersoft.jaque.expression.UnaryExpression;
 
 /**
- * Visitor that tries to execute given Expression and returns
+ * Visitor that tries to execute given Expression and returns {@link ConstantExpression}
  */
 public class ToConstantExpressionVisitor implements ExpressionVisitor<ConstantExpression> {
 

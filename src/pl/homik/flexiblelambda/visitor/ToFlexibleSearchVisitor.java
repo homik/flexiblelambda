@@ -38,6 +38,9 @@ import pl.homik.flexiblelambda.constants.FlexiblelambdaConstants;
 import pl.homik.flexiblelambda.pojo.PredicateTranslationResult;
 import pl.homik.flexiblelambda.tools.ParametersNameGenerator;
 
+/**
+ * Visitor which translates Predicate lambda into {@link PredicateTranslationResult}
+ */
 public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTranslationResult> {
 
 	private static final String SQL_LIKE = "LIKE";
@@ -125,7 +128,7 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 
 	@Override
 	public PredicateTranslationResult visit(final InvocationExpression e) {
-		final InvocableExpression fixedExpression = ArgumentsFixVisitor.normalize(e.getTarget(), e.getArguments());
+		final InvocableExpression fixedExpression = ArgumentsFixVisitor.fixArguments(e.getTarget(), e.getArguments());
 		fixedExpression.accept(this);
 		if (shouldExecuteParameters(fixedExpression)) {
 
@@ -172,8 +175,8 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 		return getCounts(arg).getConstantExpressionsCount();
 	}
 
-	private ConstantExpressionsCountVisitor getCounts(final Expression arg) {
-		final ConstantExpressionsCountVisitor vistor = new ConstantExpressionsCountVisitor();
+	private CountingVisitor getCounts(final Expression arg) {
+		final CountingVisitor vistor = new CountingVisitor();
 		arg.accept(vistor);
 		return vistor;
 	}
