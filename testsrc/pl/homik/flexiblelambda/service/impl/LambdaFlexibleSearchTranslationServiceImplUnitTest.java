@@ -136,6 +136,32 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 	}
 
 	@Test
+	public void shouldWorkWithoutOnSelfEqual() {
+		checkWhere(e -> e.getString().equals(e.getA()), "{this.string} = {this.a}");
+	}
+
+	@Test
+	public void shouldJoinWithoutArguments() {
+
+		// given
+		final SerializablePredicate<OrderModel> pred = e -> e.getUser().getName().equals(e.getStatusDisplay());
+		final LambdaFlexibleSearchQuery<OrderModel> query = new LambdaFlexibleSearchQuery<>(OrderModel.class)
+						.filter(pred);
+
+		// when
+		final FlexibleSearchQuery flex = translationService.translate(query);
+
+		// then
+		final String expectedQuery = "SELECT {this.PK} from {Order AS this"
+						+ " LEFT JOIN User as thisuser on {this.user}={thisuser.PK}}" + " WHERE ({thisuser.name} = "
+						+ "{this.statusDisplay})";
+		Assertions.assertThat(flex.getQuery()).isEqualToIgnoringCase(expectedQuery);
+		Assertions.assertThat(flex.getQueryParameters().values()).isEmpty();
+
+	}
+
+
+	@Test
 	public void shouldJoinWhenNeeded() {
 
 		// given

@@ -13,8 +13,10 @@ import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 import de.hybris.bootstrap.annotations.Accessor;
 import de.hybris.platform.core.model.ItemModel;
@@ -115,7 +117,7 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 		if (!parameterModifiers.isEmpty()) {
 			final UnaryOperator<Object> modifier = parameterModifiers.pop();
 			param = modifier.apply(value);
-		}else {
+		} else {
 			param = value;
 		}
 		sb.getParameters().put(paramName, param);
@@ -123,10 +125,12 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 
 	@Override
 	public PredicateTranslationResult visit(final InvocationExpression e) {
-		final InvocableExpression normalizedTarget = ArgumentsFixVisitor.normalize(e.getTarget(), e.getArguments());
-		normalizedTarget.accept(this);
-		if (!(normalizedTarget instanceof LambdaExpression)) {
-			for (final Expression arg : e.getArguments()) {
+		final InvocableExpression fixedExpression = ArgumentsFixVisitor.normalize(e.getTarget(), e.getArguments());
+		fixedExpression.accept(this);
+		if (shouldExecuteParameters(fixedExpression)) {
+
+			final List<Expression> arguments = filterArgumentExpressions(fixedExpression, e.getArguments());
+			for (final Expression arg : arguments) {
 				if (canBeExecuted(arg)) {
 					final ToConstantExpressionVisitor visitor = new ToConstantExpressionVisitor();
 					final ConstantExpression constantExpression = arg.accept(visitor);
@@ -141,15 +145,37 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 		return sb;
 	}
 
+	private List<Expression> filterArgumentExpressions(final InvocableExpression expression,
+					final List<Expression> arguments) {
+		if (getParametersCount(expression) == 0) {
+			// if after arguments fix this expression has no parameters we have to remove all constant expression
+			// from its parameters because they are already inlined
+			return arguments.stream().filter(e -> !(e instanceof ConstantExpression)).collect(Collectors.toList());
+		}
+		return arguments;
+	}
+
+	private boolean shouldExecuteParameters(final InvocableExpression normalizedTarget) {
+		return !(normalizedTarget instanceof LambdaExpression);
+	}
+
+	private int getParametersCount(final InvocableExpression expression) {
+		return getCounts(expression).getParameterExpressionsCount();
+	}
+
 	private boolean canBeExecuted(final Expression arg) {
 		final int expressionsCount = getExpressionsCount(arg);
 		return expressionsCount > 0;
 	}
 
 	private int getExpressionsCount(final Expression arg) {
+		return getCounts(arg).getConstantExpressionsCount();
+	}
+
+	private ConstantExpressionsCountVisitor getCounts(final Expression arg) {
 		final ConstantExpressionsCountVisitor vistor = new ConstantExpressionsCountVisitor();
 		arg.accept(vistor);
-		return vistor.getConstantExpressionsCount();
+		return vistor;
 	}
 
 	@Override
