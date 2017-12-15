@@ -2,11 +2,8 @@ package pl.homik.flexiblelambda.visitor;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.trigersoft.jaque.expression.BinaryExpression;
@@ -24,13 +21,7 @@ import com.trigersoft.jaque.expression.UnaryExpression;
  */
 public class ToConstantExpressionVisitor implements ExpressionVisitor<ConstantExpression> {
 
-	private List<Expression> parameters;
 	private List<Expression> arguments = Collections.emptyList();
-	private final Set<Expression> evaluatedParams = new HashSet<>();
-
-	public ToConstantExpressionVisitor(final List<Expression> parameters) {
-		this.parameters = new ArrayList<>(parameters);
-	}
 
 	@Override
 	public ConstantExpression visit(final BinaryExpression binaryExpression) {
@@ -61,12 +52,11 @@ public class ToConstantExpressionVisitor implements ExpressionVisitor<ConstantEx
 
 		final Member member = memberExpression.getMember();
 		if (member instanceof Method) {
-			final List<Expression> oldParams = parameters;
-			parameters=arguments;
+			final List<Expression> oldParams = arguments;
 			final ConstantExpression obj = memberExpression.getInstance().accept(this);
-			parameters=oldParams;
-			final Object[] args = memberExpression.getParameters().stream().map(e -> e.getIndex())
-							.map(e -> arguments.get(e.intValue())).map(e -> e.accept(this).getValue()).toArray();
+			arguments = oldParams;
+			final Object[] args = memberExpression.getParameters().stream().map(ParameterExpression::getIndex)
+							.map(e -> arguments.get(e)).map(e -> e.accept(this).getValue()).toArray();
 			try {
 
 				final Object result = ((Method) member).invoke(obj.getValue(), args);
@@ -81,8 +71,7 @@ public class ToConstantExpressionVisitor implements ExpressionVisitor<ConstantEx
 
 	@Override
 	public ConstantExpression visit(final ParameterExpression parameterExpression) {
-		final Expression params = parameters.get(parameterExpression.getIndex());
-		evaluatedParams.add(params);
+		final Expression params = arguments.get(parameterExpression.getIndex());
 		return params.accept(this);
 	}
 
@@ -91,7 +80,4 @@ public class ToConstantExpressionVisitor implements ExpressionVisitor<ConstantEx
 		throw new UnsupportedOperationException("unaryExpression unsupported" + unaryExpression);
 	}
 
-	public Set<Expression> getEvaluatedParams() {
-		return evaluatedParams;
-	}
 }

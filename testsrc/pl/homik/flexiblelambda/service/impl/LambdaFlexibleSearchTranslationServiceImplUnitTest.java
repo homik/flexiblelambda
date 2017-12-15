@@ -79,7 +79,7 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 		final Integer intVar = 0;
 		final SerializablePredicate<TestItemModel> lambda = e -> e.getInteger().equals(intVar)
 				&& e.getPrimitiveInteger() == intVar;
-		checkWhere(lambda, "{this.string} = ?a and {this.integer} = ?b", intVar, intVar);
+		checkWhere(lambda, "{this.integer} = ?a AND {this.primitiveInteger} = ?b", intVar, intVar);
 	}
 	
 	@Test
@@ -88,7 +88,7 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 		final Integer intVar = 0;
 		final SerializablePredicate<TestItemModel> lambda = e -> intVar.equals(e.getInteger())
 				&& intVar == e.getPrimitiveInteger();
-		checkWhere(lambda, "{this.string} = ?a and {this.integer} = ?b", intVar, intVar);
+		checkWhere(lambda, "?a = {this.integer} AND ?b = {this.primitiveInteger}", intVar, intVar);
 	}
 
 	@Test

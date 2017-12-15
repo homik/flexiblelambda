@@ -11,12 +11,9 @@ import static com.trigersoft.jaque.expression.ExpressionType.LogicalOr;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.Optional;
-import java.util.Set;
-import java.util.Stack;
 import java.util.function.UnaryOperator;
 
 import de.hybris.bootstrap.annotations.Accessor;
@@ -28,6 +25,7 @@ import com.trigersoft.jaque.expression.ConstantExpression;
 import com.trigersoft.jaque.expression.Expression;
 import com.trigersoft.jaque.expression.ExpressionType;
 import com.trigersoft.jaque.expression.ExpressionVisitor;
+import com.trigersoft.jaque.expression.InvocableExpression;
 import com.trigersoft.jaque.expression.InvocationExpression;
 import com.trigersoft.jaque.expression.LambdaExpression;
 import com.trigersoft.jaque.expression.MemberExpression;
@@ -44,10 +42,8 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 	private final PredicateTranslationResult sb = new PredicateTranslationResult();
 	private final ParametersNameGenerator paramGenerator;
 	private final ModelService modelService;
-	private final Stack<UnaryOperator<Object>> parameterModifiers = new Stack<>();
-	private final Set<Expression> alreadyEvaluated = Collections.newSetFromMap(new IdentityHashMap<>());
+	private final Deque<UnaryOperator<Object>> parameterModifiers = new LinkedList<>();
 	private boolean columnBlock = false;
-	private List<Expression> parameters = Collections.emptyList();
 
 	public ToFlexibleSearchVisitor(final ParametersNameGenerator paramGenerator, final ModelService modelService) {
 		this.paramGenerator = paramGenerator;
@@ -112,34 +108,48 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 		return sb;
 	}
 
-	private void addSqlParam(Object value) {
+	private void addSqlParam(final Object value) {
 		final String paramName = paramGenerator.next();
 		sb.getWhere().append('?').append(paramName);
-
+		final Object param;
 		if (!parameterModifiers.isEmpty()) {
 			final UnaryOperator<Object> modifier = parameterModifiers.pop();
-			value = modifier.apply(value);
+			param = modifier.apply(value);
+		}else {
+			param = value;
 		}
-		sb.getParameters().put(paramName, value);
+		sb.getParameters().put(paramName, param);
 	}
 
 	@Override
 	public PredicateTranslationResult visit(final InvocationExpression e) {
-		final List<Expression> oldParameters = parameters;
-		parameters = e.getArguments();
-		e.getTarget().accept(this);
-		// we have to also evaluate arguments
-		for (final Expression arg : e.getArguments()) {
-			if (!(arg instanceof ParameterExpression) && !alreadyEvaluated.contains(arg)) {
-				final ToConstantExpressionVisitor visitor = new ToConstantExpressionVisitor(oldParameters);
-				final ConstantExpression constantExpression = arg.accept(visitor);
-				alreadyEvaluated.addAll(visitor.getEvaluatedParams());
-				constantExpression.accept(this);
+		final InvocableExpression normalizedTarget = ArgumentsFixVisitor.normalize(e.getTarget(), e.getArguments());
+		normalizedTarget.accept(this);
+		if (!(normalizedTarget instanceof LambdaExpression)) {
+			for (final Expression arg : e.getArguments()) {
+				if (canBeExecuted(arg)) {
+					final ToConstantExpressionVisitor visitor = new ToConstantExpressionVisitor();
+					final ConstantExpression constantExpression = arg.accept(visitor);
+					constantExpression.accept(this);
+				} else {
+					arg.accept(this);
+				}
 			}
 		}
-		parameters = oldParameters;
 
+		// we have to also evaluate arguments
 		return sb;
+	}
+
+	private boolean canBeExecuted(final Expression arg) {
+		final int expressionsCount = getExpressionsCount(arg);
+		return expressionsCount > 0;
+	}
+
+	private int getExpressionsCount(final Expression arg) {
+		final ConstantExpressionsCountVisitor vistor = new ConstantExpressionsCountVisitor();
+		arg.accept(vistor);
+		return vistor.getConstantExpressionsCount();
 	}
 
 	@Override
@@ -269,7 +279,7 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 		return Optional.of(ex.getMember()).filter(e-> e instanceof  Method)
 						.map(e-> (Method)e)
 						.map(e -> e.getAnnotation(Accessor.class))
-						.map( Accessor::qualifier);
+						.map(Accessor::qualifier);
 		// @formatter:on
 	}
 
