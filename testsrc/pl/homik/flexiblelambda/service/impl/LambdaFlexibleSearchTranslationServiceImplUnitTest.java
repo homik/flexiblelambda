@@ -70,7 +70,7 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 		final String stringVar = "xxx";
 		final Integer intVar = 0;
 		final SerializablePredicate<TestItemModel> lambda = e -> e.getString().equals(stringVar)
-				|| e.getInteger() == intVar;
+						|| e.getInteger() == intVar;
 		checkWhere(lambda, "{this.string} = ?a or {this.integer} = ?b", stringVar, intVar);
 	}
 
@@ -78,16 +78,16 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 	public void shouldWorkWithSameParameterUsedTwice() {
 		final Integer intVar = 0;
 		final SerializablePredicate<TestItemModel> lambda = e -> e.getInteger().equals(intVar)
-				&& e.getPrimitiveInteger() == intVar;
+						&& e.getPrimitiveInteger() == intVar;
 		checkWhere(lambda, "{this.integer} = ?a AND {this.primitiveInteger} = ?b", intVar, intVar);
 	}
-	
+
 	@Test
 	public void shouldWorkWithReversedParametersOrder() {
 
 		final Integer intVar = 0;
-		final SerializablePredicate<TestItemModel> lambda = e -> intVar.equals(e.getInteger())
-				&& intVar == e.getPrimitiveInteger();
+		final SerializablePredicate<TestItemModel> lambda = e -> intVar.equals(e.getInteger()) && intVar == e
+						.getPrimitiveInteger();
 		checkWhere(lambda, "?a = {this.integer} AND ?b = {this.primitiveInteger}", intVar, intVar);
 	}
 
@@ -119,6 +119,13 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 	}
 
 	@Test
+	public void shouldWorkWithThreeExpression() {
+
+		checkWhere(e -> e.getBoolean() && e.getString().equals("a") || e.getString().equals("b"),
+						"{this.boolean} = ?a and {this.string} = ?b or {this.string} = ?c", true, "a", "b");
+	}
+
+	@Test
 	public void shouldWorkWithBooleanFields() {
 
 		checkWhere(e -> e.getBoolean(), "{this.boolean} = ?a", true);
@@ -132,7 +139,7 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 		checkWhere(e -> e.getString().endsWith("abc"), "{this.string} LIKE ?a", "%abc");
 		checkWhere(e -> e.getString().contains("abc"), "{this.string} LIKE ?a", "%abc%");
 		checkWhere(e -> e.getString().startsWith("abc") || e.getString().endsWith("abc"),
-				"{this.string} LIKE ?a OR {this.string} LIKE ?b", "abc%", "%abc");
+						"{this.string} LIKE ?a OR {this.string} LIKE ?b", "abc%", "%abc");
 	}
 
 	@Test
@@ -160,21 +167,20 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 
 	}
 
-
 	@Test
 	public void shouldJoinWhenNeeded() {
 
 		// given
 		final SerializablePredicate<OrderModel> pred = e -> e.getUser().getName().equals("Darek");
 		final LambdaFlexibleSearchQuery<OrderModel> query = new LambdaFlexibleSearchQuery<>(OrderModel.class)
-				.filter(pred);
+						.filter(pred);
 
 		// when
 		final FlexibleSearchQuery flex = translationService.translate(query);
 
 		// then
 		final String expectedQuery = "SELECT {this.PK} from {Order AS this"
-				+ " LEFT JOIN User as thisuser on {this.user}={thisuser.PK}}" + " WHERE ({thisuser.name} = ?a)";
+						+ " LEFT JOIN User as thisuser on {this.user}={thisuser.PK}}" + " WHERE ({thisuser.name} = ?a)";
 		Assertions.assertThat(flex.getQuery()).isEqualToIgnoringCase(expectedQuery);
 		Assertions.assertThat(flex.getQueryParameters().values()).containsOnly("Darek");
 
@@ -186,15 +192,16 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 		// given
 		final String poland = "pl";
 		final SerializablePredicate<OrderModel> pred = e -> e.getDeliveryAddress().getCountry().getIsocode()
-				.equals(poland);
+						.equals(poland);
 		final LambdaFlexibleSearchQuery<OrderModel> query = new LambdaFlexibleSearchQuery<>(OrderModel.class)
-				.filter(pred);
+						.filter(pred);
 
-		final SerializablePredicate<OrderModel> pred2 = e -> e.getDeliveryAddress().getCountry().getIsocode()
-				.equals(poland) && e.getDeliveryAddress().getCompany().equals("SAP");
+		final SerializablePredicate<OrderModel> pred2 = e ->
+						e.getDeliveryAddress().getCountry().getIsocode().equals(poland) && e.getDeliveryAddress()
+										.getCompany().equals("SAP");
 
 		final LambdaFlexibleSearchQuery<OrderModel> query2 = new LambdaFlexibleSearchQuery<>(OrderModel.class)
-				.filter(pred2);
+						.filter(pred2);
 
 		// when
 		final FlexibleSearchQuery flex = translationService.translate(query);
@@ -202,17 +209,17 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 
 		// then
 		final String expectedQuery = "SELECT {this.PK} from {Order AS this"
-				+ " LEFT JOIN Address as thisdeliveryAddress on {this.deliveryAddress}={thisdeliveryAddress.PK}"
-				+ " LEFT JOIN Country as thisdeliveryAddresscountry on {thisdeliveryAddress.country}={thisdeliveryAddresscountry.PK}}"
-				+ " WHERE ({thisdeliveryAddresscountry.isocode} = ?a)";
+						+ " LEFT JOIN Address as thisdeliveryAddress on {this.deliveryAddress}={thisdeliveryAddress.PK}"
+						+ " LEFT JOIN Country as thisdeliveryAddresscountry on {thisdeliveryAddress.country}={thisdeliveryAddresscountry.PK}}"
+						+ " WHERE ({thisdeliveryAddresscountry.isocode} = ?a)";
 		Assertions.assertThat(flex.getQuery()).isEqualToIgnoringCase(expectedQuery);
 
 		Assertions.assertThat(flex.getQueryParameters().values()).containsOnly(poland);
 
 		final String expectedQuery2 = "SELECT {this.PK} from {Order AS this"
-				+ " LEFT JOIN Address as thisdeliveryAddress on {this.deliveryAddress}={thisdeliveryAddress.PK}"
-				+ " LEFT JOIN Country as thisdeliveryAddresscountry on {thisdeliveryAddress.country}={thisdeliveryAddresscountry.PK}}"
-				+ " WHERE ({thisdeliveryAddresscountry.isocode} = ?a AND {thisdeliveryAddress.company} = ?b)";
+						+ " LEFT JOIN Address as thisdeliveryAddress on {this.deliveryAddress}={thisdeliveryAddress.PK}"
+						+ " LEFT JOIN Country as thisdeliveryAddresscountry on {thisdeliveryAddress.country}={thisdeliveryAddresscountry.PK}}"
+						+ " WHERE ({thisdeliveryAddresscountry.isocode} = ?a AND {thisdeliveryAddress.company} = ?b)";
 		Assertions.assertThat(flex2.getQuery()).isEqualToIgnoringCase(expectedQuery2);
 
 		Assertions.assertThat(flex2.getQueryParameters().values()).containsOnly(poland, "SAP");
@@ -220,11 +227,11 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 	}
 
 	public void checkWhere(final SerializablePredicate<TestItemModel> pred, final String expectedWhere,
-			final Object... expectedParams) {
+					final Object... expectedParams) {
 
 		// when
 		final LambdaFlexibleSearchQuery<TestItemModel> query = new LambdaFlexibleSearchQuery<>(TestItemModel.class)
-				.filter(pred);
+						.filter(pred);
 		final FlexibleSearchQuery flex = translationService.translate(query);
 
 		// then
