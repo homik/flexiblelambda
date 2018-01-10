@@ -45,6 +45,11 @@ public class LambdaFlexibleSearchTranslationServiceImplUnitTest {
 	}
 
 	@Test
+	public void shouldGenerateCorrectNumberNotEqualExpression() {
+		checkWhere(e -> e.getInteger() != 0, "{this.integer} <> ?a", 0);
+	}
+
+	@Test
 	public void shouldGenerateCorrentNumberEqualityFromVariable() {
 		final Integer intVar = 0;
 		checkWhere(e -> e.getInteger() == intVar, "{this.integer} = ?a", 0);

@@ -8,6 +8,7 @@ import static com.trigersoft.jaque.expression.ExpressionType.LessThan;
 import static com.trigersoft.jaque.expression.ExpressionType.LessThanOrEqual;
 import static com.trigersoft.jaque.expression.ExpressionType.LogicalAnd;
 import static com.trigersoft.jaque.expression.ExpressionType.LogicalOr;
+import static com.trigersoft.jaque.expression.ExpressionType.NotEqual;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
@@ -73,6 +74,8 @@ public class ToFlexibleSearchVisitor implements ExpressionVisitor<PredicateTrans
 			return "OR";
 		case IsNull:
 			return "IS NULL";
+		case NotEqual:
+			return "<>";
 		default:
 			throw new UnsupportedOperationException(
 							"unsupported expression type: " + expressionType + " " + ExpressionType
