@@ -23,7 +23,9 @@ For example, the following code:
 will execute following flexible search query:
  
 ```
-  SELECT {this.PK} from {Order AS this LEFT JOIN User as thisuser on {this.user}={thisuser.PK}} WHERE ({thisuser.uid} = ?a OR {thisuser.name} = ?b)"
+  SELECT {this.PK} from {Order AS this
+  LEFT JOIN User as thisuser on {this.user}={thisuser.PK}} 
+  WHERE ({thisuser.uid} = ?a OR {thisuser.name} = ?b)"
 ```
 With value of *uid* and "John" as parameters, allowing you to write readable queries in a type safe way.
 
