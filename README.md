@@ -6,7 +6,7 @@ It uses [JaQue](https://github.com/TrigerSoft/jaque) to parse lambda expressions
 
 ## Example
 For example, the following code:
-```
+```java
    @Resource
    LambdaFlexibleSearchService lambdaFlexibleSearchService;
     
@@ -22,7 +22,7 @@ For example, the following code:
  
 will execute following flexible search query:
  
-```
+```sql
   SELECT {this.PK} from {Order AS this
   LEFT JOIN User as thisuser on {this.user}={thisuser.PK}} 
   WHERE ({thisuser.uid} = ?a OR {thisuser.name} = ?b)"
